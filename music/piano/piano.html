@@ -136,9 +136,9 @@ function resetPianoKeyboard(nOct,fromOct,toOct){
   tmpAppend=function(nns){nns.forEach(function(nn){pe.appendChild(createNoteKey(nn));});};
   for(iOct=1; iOct<8; iOct++){
     pe.appendChild(createHalfKey());
-    tmpAppend(tmpB.slice(0,2).reverse());
+    tmpAppend(tmpB.slice(3,5).reverse());
     pe.appendChild(createFullKey());
-    tmpAppend(tmpB.slice(2,5).reverse());
+    tmpAppend(tmpB.slice(0,3).reverse());
     tmpB=tmpB.slice(5);
     pe.appendChild(createHalfKey());
     tmpAppend(tmpW.slice(0,7).reverse());
