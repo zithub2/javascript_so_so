@@ -1,0 +1,10 @@
+# usage
+touch to play.
+
+adjacent tow rows, with the upper black and the lower white, form an octave.
+there are 9 octaves but 88 keys, as is explained below.
+the highest octave has only a key c5, and the lowest octave has only 3 keys: A2,#A2,B2,
+which is consistent with a real piano.
+
+this piano app is designed for devices without a keyboard,
+since if you can use one, then vmpk + qsynth is better.
