@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf8" />
+    <title>piano - javascript so so</title>
+<style type="text/css">
+#piano {
+  background-color: silver;
+  width: 252px;
+}
+.key {
+  border-color: silver;
+  border-left-width: 2px;
+  border-right-width: 2px;
+  border-left-style: dashed;
+  border-right-style: dashed;
+  border-top-style: none;
+  border-bottom-style: none;
+  display: inline-block;
+}
+.fullKey {
+  height: 32px;
+  width: 32px;
+}
+.halfKey {
+  height: 32px;
+  width: 14px;
+}
+.whiteKey {
+  color: black;
+  background-color: white;
+}
+.blackKey {
+  color: white;
+  background-color: black;
+}
+</style>
+<script>
+////util{{{1
+function gid(s){return document.getElementById(s)}
+function ce(s){return document.createElement(s)}
+function seq(n,cum=[]){if(n<=0)return cum;else return seq(n-1,[n].concat(cum));}
+////music{{{1
+//G1-g4 are complete (with 12 notes), while G2 has 3 and g5 has 1.
+octaveGroupNames=['G2','G1','G','g','g1','g2','g3','g4','g5'];
+noteNames=['c','cm','d','dm','e','f','fm','g','gm','a','am','b'];
+//trans between octaveNoteName and (octaveName,noteName)
+//there are 12*9>88 valid octave note names
+function getOctaveNoteName(octaveName,noteName){
+  onn=octaveName.substring(1)+noteName.substring(1);//n[m] such as 3m or 3
+  iOct=octaveGroupNames.indexOf(octaveName);
+  if(iOct>2){
+    onn=noteName[0]+onn;
+  }else if(iOct>=0){
+    onn=noteName[0].toUpperCase()+onn;
+  }else{
+    onn='';//no such octave group
+  }
+  return onn;
+}
+function getOctave(onn){
+  onn=onn.replace('m','');
+  return (onn[0].toUpperCase()==onn[0]?'G':'g')+onn.slice(1);
+}
+function getNoteName(onn){
+  return onn.replace(/[1-5]/,'').toLowerCase();
+}
+//key names, black or white
+//there are 88 valid key names
+keyNames=//A2,A2m,B2,C1,C1m,...,c5, 88 in total
+octaveGroupNames.reduce(
+    function(total,ogn){
+      return total.concat(noteNames.map(function(nn){
+        return getOctaveNoteName(ogn,nn);
+      }));
+    }, []).slice(9,9+88);
+function isWhiteKeyName(kn){return kn.indexOf('m')<0;}
+function isBlackKeyName(kn){return !isWhiteKeyName(kn);}
+whiteKeyNames=keyNames.filter(isWhiteKeyName);
+blackKeyNames=keyNames.filter(isBlackKeyName);
+////files{{{1
+function getAudioFileName(kn){//a0.ogg, a0m.ogg,b0.ogg,c1.ogg,c1m.ogg,...,c8.ogg, 88 in total
+  oct=getOctave(kn);
+  nn=getNoteName(kn);
+  return nn[0]+octaveGroupNames.indexOf(oct)+nn.substr(1)+".ogg";
+}
+////dom{{{1
+function cdc(cn){//create div with classname
+  e=ce('div'); e.className=cn;
+  return e;
+}
+function createKey(cn){
+  return cdc('key '+cn);
+}
+function createFullKey(cn=''){
+  return createKey('fullKey'+(''==cn?'':' '+cn));
+}
+function createHalfKey(cn=''){
+  return createKey('halfKey'+(''==cn?'':' '+cn));
+}
+function playKey(ev){
+  id=ev.target.id;
+  gid('audio_'+id.substr(id.indexOf('_')+1)).play();
+}
+function stopKey(ev){
+  id=ev.target.id;
+  el=gid('audio_'+id.substr(id.indexOf('_')+1));
+  el.pause();
+  el.currentTime=0;
+}
+function createNoteKey(octaveNoteName){
+  el=createFullKey('m'==octaveNoteName[octaveNoteName.length-1]?'blackKey':'whiteKey')
+  el.id='key_'+octaveNoteName;
+  el.addEventListener('touchstart',playKey);
+  el.addEventListener('touchend',stopKey);
+  el.addEventListener('mousedown',playKey);
+  el.addEventListener('mouseup',stopKey);
+  el.addEventListener('mouseout',stopKey);
+  return el;
+}
+////main{{{1
+function resetPianoKeyboard(nOct,fromOct,toOct){
+  pe=gid('piano');
+  pe.innerHTML='';
+  //highest octave
+  pe.appendChild(createHalfKey());
+  seq(2).forEach(function(n){pe.appendChild(createFullKey('blackKey'));});
+  pe.appendChild(createFullKey());
+  seq(3).forEach(function(n){pe.appendChild(createFullKey('blackKey'));});
+  pe.appendChild(createHalfKey());
+  pe.appendChild(createNoteKey('c5'));
+  seq(6).forEach(function(n){pe.appendChild(createFullKey('whiteKey'))});
+  //middle octaves
+  tmpW=whiteKeyNames.reverse().slice(1);
+  tmpB=blackKeyNames.reverse();
+  tmpAppend=function(nns){nns.forEach(function(nn){pe.appendChild(createNoteKey(nn));});};
+  for(iOct=1; iOct<8; iOct++){
+    pe.appendChild(createHalfKey());
+    tmpAppend(tmpB.slice(0,2).reverse());
+    pe.appendChild(createFullKey());
+    tmpAppend(tmpB.slice(2,5).reverse());
+    tmpB=tmpB.slice(5);
+    pe.appendChild(createHalfKey());
+    tmpAppend(tmpW.slice(0,7).reverse());
+    tmpW=tmpW.slice(7);
+  }
+  //lowest octave
+  pe.appendChild(createHalfKey());
+  seq(2).forEach(function(n){pe.appendChild(createFullKey('blackKey'));});
+  pe.appendChild(createFullKey());
+  seq(2).forEach(function(n){pe.appendChild(createFullKey('blackKey'));});
+  pe.appendChild(createNoteKey('A2m'));
+  pe.appendChild(createHalfKey());
+  seq(5).forEach(function(n){pe.appendChild(createFullKey('whiteKey'))});
+  pe.appendChild(createNoteKey('A2'));
+  pe.appendChild(createNoteKey('B2'));
+}
+////}}}
+</script>
+  </head>
+  <body>
+    <div id='piano'></div>
+    <div id='audios' hidden></div>
+    <script>
+resetPianoKeyboard();
+//
+ea=gid('audios');//element of id audios
+keyNames.forEach(function(onn){
+  fn=getAudioFileName(onn);
+  a=ce('audio');
+  a.id='audio_'+onn;
+  a.src='./piano_note_88/'+fn;
+  ea.appendChild(a);
+});
+    </script>
+  </body>
+</html>
