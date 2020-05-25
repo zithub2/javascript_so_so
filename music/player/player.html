@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html">
+    <meta charset="utf-8">
+    <title>Music</title>
+    <style>
+#incsize{
+  background-color: rgba(0,255,255,0.5);
+  width: 5ex;
+  height: 5ex;
+  position: fixed;
+  right: 5ex;
+  bottom: 15ex;
+}
+#decsize{
+  background-color: rgba(0,255,255,0.5);
+  width: 5ex;
+  height: 5ex;
+  position: fixed;
+  right: 5ex;
+  bottom: 5ex;
+}
+    </style>
+  </head>
+  <script>
+    fontSize=20;
+  </script>
+  <script>
+    id=function(x){return x;};
+
+gid=function(s){return document.getElementById(s);};
+ce=function(s){return document.createElement(s);};
+cet=function(s,t){e=ce(s);e.innerHTML=t;return e;};
+
+map=function(a,f){
+  ma=[];
+  for(i=0; i<a.length; i++){
+    ma.push(f(a[i],i,a));
+  }
+  return ma;
+};
+toArray=function(a){return map(a,id);};
+musicFiles=[];
+iPlaying=0;
+updateByMF=function(){
+  ul=gid("file-list");
+  ul.innerHTML='';
+  musicFiles.forEach(function(fn,i){
+    li=cet('li',fn);
+    li.onclick=function(){play(i);};
+    ul.appendChild(li);
+  });
+};
+updateMusicList=function(){
+  musicFiles=toArray(gid("file-selector").files).filter(function(f){return f.type.substr(0,6).toLowerCase()=='audio/';}).map(function(f){return f.name});
+  updateByMF();
+  setMode();
+};
+play=function(i){
+  console.log(i);
+  iPlaying=i%musicFiles.length;
+  fn=musicFiles[iPlaying];
+  document.title=fn;
+  gid("player").src=fn;
+};
+playNext=function(){
+  play(iPlaying+1);
+};
+randInt=function(max){
+  return Math.floor(Math.random()*max);
+};
+playRandom=function(){
+  for(;;){
+    i=randInt(musicFiles.length);
+    if(i!=iPlaying){
+      break;
+    }
+  }
+  play(i);
+};
+randSeq=function(n){
+  s=[];
+  for(i=0; i<n; i++){
+    s.push(i);
+  }
+  for(i=0; i<n; i++){
+    a=s[randInt(n)];
+    b=s[randInt(n)];
+    tmp=s[a];
+    s[a]=s[b];
+    s[b]=tmp;
+  }
+  return s;
+}
+setMode=function(){
+  m=map(gid('modes').elements,id).filter(function(e){return e.checked;})[0].value;
+  p=gid('player');
+  switch(m){
+    case '1':
+      p.loop=undefined;
+      p.onended=undefined;
+      break;
+    case '11':
+      p.loop='loop';
+      p.onended=undefined;
+      break;
+    case '12':
+      p.loop=undefined;
+      p.onended=playNext;
+      break;
+    case '1*':
+      p.loop=undefined;
+      p.onended=playRandom;
+      break;
+  }
+};
+shuffle=function(){
+  if(musicFiles.length>0){
+    s=randSeq(musicFiles.length);
+    musicFiles=s.map(function(si){return musicFiles[si];});
+    iPlaying=s.indexOf(iPlaying);
+    console.log(musicFiles);
+    console.log(iPlaying);
+    updateByMF();
+  }
+}
+  </script>
+  <body>
+    <input type='file' multiple="multiple" id='file-selector' onchange='updateMusicList()' />
+    <button onclick='shuffle()'>3-2-5-1-4</button>
+    <hr />
+    <form onchange='setMode()' id='modes'>
+      <input type='radio' name='mode' value='1'>---1---
+      <input type='radio' name='mode' value='11'>-1-1-1-
+      <input type='radio' name='mode' value='12'checked>-1-2-3-
+      <input type='radio' name='mode' value='1*'>-1-*-*-
+    </form>
+    <hr />
+    <ul id='file-list'></ul>
+    <audio controls="controls" autoplay='autoplay' id='player'></audio>
+
+    <div id='incsize' onclick='document.body.style.fontSize=(++fontSize)+"px";'></div>
+    <div id='decsize' onclick='document.body.style.fontSize=(--fontSize)+"px";'></div>
+  </body>
+</html>
