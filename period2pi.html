@@ -1,0 +1,138 @@
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <title>period 2&pi;</title>
+    <script>
+g=function(s){
+  var s0=s[0];
+  var s1 = s.substr(1);
+  var r;
+  switch(s0){
+    case '#':// id
+      r = document.getElementById(s1);
+      break;
+    case '.':// class name
+      r = document.getElementsByClassName(s1);
+      break;
+    case '<':// tag name
+      r = document.getElementsByTagName(s1);
+      break;
+    case '$':// name
+      r = document.getElementsByName(s1);
+      break;
+    default:
+      console.error('unknown symbol: ' + s0);
+      console.trace();
+  }
+  return r;
+}
+openURL=function(url,fn='canvas'){//when window.open fails
+  var a=document.createElement('a');
+  a.href=url; a.target='_blank'; a.download=fn+'.png'
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+};
+linspace=function(f,t,n){
+  var r=Array(n);
+  for(i=0; i<n; i++){
+    r[i]=f+i/(n-1)*(t-f);
+  }
+  return r;
+};
+    </script>
+  <style>
+canvas {
+  float : left;
+}
+      form {
+        float : left;
+        width : 100px;
+      }
+      input {
+        float : left;
+        width : 40px;
+        height : 40px;
+        margin : 5px;
+      }
+  </style>
+  </head>
+  <body>
+    <canvas id='canvas'>no canvas</canvas>
+    <form>
+      <input class='r param' type='number' min='0' value='5' onchange='draw();'>
+      <input class='w param' type='number' min='0' value='10' onchange='draw();'>
+      <br />
+      <input class='r param' type='number' min='0' value='10' onchange='draw();'>
+      <input class='w param' type='number' min='0' value='5' onchange='draw();'>
+      <br />
+      <input class='r param' type='number' min='0' value='0' onchange='draw();'>
+      <input class='w param' type='number' min='0' value='2' onchange='draw();'>
+      <br />
+      <input id='bgc' class='param' type='color' value='#00ffff' onchange='draw();'>
+      <input id='save' class='param' type='button' value='@' onclick='openURL(cvs.toDataURL());'>
+      <br />
+      <input id='unit' class='param' type='number' min='0' value='15' onchange='draw();'>
+      <input id='nP' class='param' type='number' min='0' max='8' value='3' onchange='draw();'>
+    </form>
+    <script>
+cvs=g('#canvas');
+rMax=wMax=10;
+Array.from(g('.r')).forEach(function(el){el.max=rMax;});
+Array.from(g('.w')).forEach(function(el){el.max=wMax;});
+Q=250;
+cvs.width=cvs.height=Q*2+1;
+
+ctx=cvs.getContext('2d');
+genPoints=function(r,w){
+  if(r.length==w.length && r.length>0){
+    var unit=parseInt(g('#unit').value);
+    var nP=parseInt(g('#nP').value);
+    var t=linspace(0,2*Math.PI,Math.round(1+2**(2+nP)));
+    return t.map(function(tj){
+      var xj=0;
+      var yj=0;
+      var cj='#';
+      for(var i=0; i<r.length; i++){
+        var ri=unit*r[i];
+        var wi=w[i]*tj;
+        var ni=Math.round(wi*256/Math.PI/2)%256;
+        cj+= (ni<0x10 ? '0' : '') + ni.toString(16);
+        xj+=ri*Math.cos(wi+Math.PI/2);
+        yj+=ri*Math.sin(wi+Math.PI/2);
+      }
+      return {
+        x:xj+Q,
+        y:yj+Q,
+        c:cj
+      };
+    });
+  }
+};
+plotPoints=function(p,lw){
+  if(p){
+    ctx.lineWidth=lw;
+    p.slice(0,-1).forEach(function(pi,i){
+      ctx.beginPath();
+      ctx.strokeStyle=pi.c;
+      ctx.moveTo(pi.x,pi.y);
+      var piNext=p[i+1];
+      ctx.lineTo(piNext.x,piNext.y);
+      ctx.stroke();
+    });
+  }
+};
+getR=function(){return Array.from(g('.r')).map(function(el){return parseInt(el.value);});};
+getW=function(){return Array.from(g('.w')).map(function(el){return parseInt(el.value);});};
+draw=function(){
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+
+  ctx.fillStyle=g('#bgc').value;
+  ctx.fillRect(0,0,cvs.width,cvs.height);
+
+  plotPoints(genPoints(getR(),getW()),5);
+};
+draw();
+    </script>
+  </body>
+</html>
