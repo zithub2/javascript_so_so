@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>学</title>
+    <style>
+#i, td{
+  font-family: monospace;
+}
+td{
+  border: 1px solid black;
+}
+    </style>
+    <script>
+      //util fun{{{
+      unshift=function(head,tail){ tail.push(head); return tail; };
+      p=function(x){console.log(x);};
+      gid=function(x){return document.getElementById(x);};
+      gcn=function(x){return document.getElementsByClassName(x);};
+      ce=function(tagname){return document.createElement(tagname);};
+      cei=function(tagname,innerHTML){
+        var el=ce(tagname);
+        el.innerHTML=innerHTML;
+        return el;
+      }
+      ceic=function(tagname,ih,cn){
+        var el=cei(tagname,ih);
+        el.className=cn;
+        return el;
+      };
+      cTr=function(ihs){//list of innerHTML of td
+        var tr=ce('tr');
+        ihs.forEach(function(ih){ tr.appendChild(cei('td',ih)); });
+        return tr;
+      }
+      //}}}
+    </script>
+    <script>
+      L={//lang{{{
+        nil: '坤',
+        cons: '一',
+        car: '阳',
+        cdr: '阴',
+        yu: '预',
+        atom: '止',
+        eq: '同',
+        imp: '假',
+        yuan: '缘',
+        T: '是',
+        F: '非',
+        lg: '「',
+        rg: '」',
+        sep: '　',
+        zhi: '指',
+        yue: '月',
+      };//}}}
+      F={//fun{{{
+        cons: function(x,y){ return [x,y]; } ,
+        consToNil: function(x){ return F.cons(x,L.nil); } ,
+        car: function(f){ return f[0]; } ,
+        caar: f=>F.car(F.car(f)),
+        cdar: f=>F.cdr(F.car(f)),
+        cadr: f=>F.car(F.cdr(f)),
+        cddr: f=>F.cdr(F.cdr(f)),
+        caddr: f=>F.car(F.cdr(F.cdr(f))),
+        cdr: function(f){ return f[1]; } ,
+        eq: function(x,y){ return F.b2f(F.beq(x,y)); } ,
+        atom: function(f){ return F.b2f(F.batom(f)); } ,
+        batom: function(f){ return typeof(f)=='string'; } ,
+        beq: function(x,y){
+          var b=false;
+          if(F.batom(x)){ if(F.batom(y)) b = x==y; }
+          else if(!F.batom(y)) b = F.beq(F.car(x),F.car(y)) && F.beq(F.cdr(x),F.cdr(y));
+          return b;
+        } ,
+        b2f: function(b){ return b ? L.T : L.F; } ,
+        isNil: function(f){ return F.beq(f,L.nil); } ,
+        f2l_: function(f){ return F.isNil(f) ? [] : F.batom(f) ? [".",f] : unshift(F.car(f),F.f2l_(F.cdr(f))); } ,
+        f2l: function(f){ return F.f2l_(f).reverse(); } ,
+        bind: function(f,r,dict){
+          if(F.batom(f)){
+            if(!F.isNil(f)) dict[f]=r;
+          }else{
+            F.bind(F.car(f),F.car(r),dict)
+            F.bind(F.cdr(f),F.cdr(r),dict)
+          }
+        } ,
+        lookup: function (word,dicts){
+          if(F.isNil(dicts)) return false;
+          else{
+            var d=F.car(dicts);
+            if(d.hasOwnProperty(word)){
+              lookupDicts=dicts;
+              return d[word];
+            }else return F.lookup(word,F.cdr(dicts));
+          }
+        } ,
+      };//}}}
+      function xue(){
+        var env = F.cons({},L.nil);// init bindings for lispE
+        lispREP(gid('i').value, env);
+      }
+      function lispREP(s,env){
+        lispP3(lispE3(lispR(s), env)[0]);
+      }
+      function lispR(fileString){//{{{
+        function withIndent(line){//{{{
+          function parts2form(parts){//{{{
+            if(parts.length==0 || parts[0]==L.rg) return [L.nil,parts];
+            else if(parts[0]==L.lg){
+              var [f,restParts]=parts2form(parts.slice(1));
+              var [f2,restParts2]=parts2form(restParts.slice(1));
+              return [F.cons(f,f2),restParts2];
+            }else{
+              var [f,restParts]=parts2form(parts.slice(1))
+              return [F.cons(parts[0],f),restParts];
+            }
+          }//}}}
+          var i=line.search(/\S/);
+          if(i<0) return [i,L.nil];
+          var parts=line.slice(i).match(new RegExp('(['+L.lg+']|['+L.rg+']|[^\\s'+L.lg+L.rg+']+)','g'));
+          var f=parts2form(parts)[0];
+          return [i,f];
+        }//}}}
+        function indent2form(ifs){//{{{
+          function indent2form_(ifs){//ifs.length>=1//{{{
+            function transFirst(f){ return F.isNil(F.cdr(f)) ? F.car(f) : f; }
+            var first=ifs[0]
+            if(ifs.length<=1) return F.consToNil(transFirst(first[1]));
+            var indent=first[0];
+            var rest=ifs.slice(1);
+            var index=rest.findIndex(function([i,f]){ return i<=indent; });
+            function handleIndex(index,first,rest){//{{{
+              function combineFirst(first,fs){ return F.cons(F.car(first), F.isNil(F.cdr(first)) ? fs : combineFirst(F.cdr(first),fs)); }
+              if(index<0){//all of rest belong to first
+                return F.consToNil(combineFirst(first[1],indent2form_(rest)));
+              }else if(index==0){//none of rest belongs to first
+                return F.cons(transFirst(first[1]),indent2form_(rest));
+              }else{
+                var part1=rest.slice(0,index); var f=combineFirst(first[1],indent2form_(part1));
+                var part2=rest.slice(index); var fs=indent2form_(part2)
+                return F.cons(f,fs);
+              }
+            }//}}}
+            return handleIndex(index,first,rest);
+          }//}}}
+          if(ifs.length==0) return L.nil;
+          return indent2form_(ifs);
+        }//}}}
+        var ifs=fileString.split('\n').map(withIndent).filter(function([i,f]){
+          return i>=0 && !F.isNil(f);
+        });
+        return indent2form(ifs);
+      }//}}}
+      function lispE3(f, env){//seq{{{
+        if(F.batom(f)){ return [L.nil,env]; }
+        else{
+          var [vf0,env2] = veval(f,0,env);
+          var [vfRest, envRest] = lispE3(F.cdr(f), env2);
+          return [F.cons(vf0, vfRest), envRest];
+        }
+      }//}}}
+      function veval(l,i,env){ return i==0 ? lispE1(F.car(l),env) : veval(F.cdr(l),i-1,env); }
+      function lispEprog(f, env){//{{{
+        var fCDR = F.cdr(f);
+        var ve =veval(f,0,env);//val and env
+        return F.batom(fCDR) ? ve : lispEprog(fCDR, ve[1]);
+      }//}}}
+      function lispE1(f,env){//{{{
+        var v=function(i){return veval(f,i,env)[0];};
+        function peval(f, env){//parallel{{{
+          if(F.batom(f)){ return lispE1(f,env)[0]; }
+          else{
+            var vf0 = veval(f,0,env)[0];
+            var vfRest = peval(F.cdr(f), env);
+            return F.cons(vf0, vfRest);
+          }
+        }//}}}
+        function evalAtom(nom){//{{{
+          if(F.isNil(nom)) return nom;
+          var nom2=F.lookup(nom,env);
+          if(nom2) return nom2
+          else throw "unbound!\t"+nom;
+        }//}}}
+        function evalAxiom(f0){//{{{
+            if(F.beq(f0,L.cons)){ return F.cons(v(1),v(2)); }
+            else if(F.beq(f0,L.car)){ return F.car(v(1)); }
+            else if(F.beq(f0,L.cdr)){ return F.cdr(v(1)); }
+            else if(F.beq(f0,L.yu)){ return F.beq(L.T,v(1)) ? v(2) : v(3) ; }
+            else if(F.beq(f0,L.atom)){ return F.atom(v(1)); }
+            else if(F.beq(f0,L.eq)){ return F.eq(v(1),v(2)); }
+            else if(F.beq(f0,L.yuan)){
+              var v1=v(1);
+              var v2=v(2);
+              F.bind(v1,v2,F.car(env));
+              return F.cons(v1,v2);
+            }
+            else return false;
+        }//}}}
+        function evalLambda(template, templateEnv){//{{{
+          var tfargs=F.car(template);//type and formalnames of args
+          var targs=F.car(tfargs);
+          var fargs=F.cdr(tfargs);
+          var tfbody=F.cdr(template);
+          var tbody=F.car(tfbody);
+          var fbody=F.cdr(tfbody);
+          var rargs=F.cdr(f);
+          var lambdaBindings={};//fun-eval only change its own lambdaBindings
+          F.bind(fargs, targs==L.yue ? peval(rargs, env) : rargs , lambdaBindings);
+          var lambdaEnv=F.cons(lambdaBindings, templateEnv);//create lambdaEnv from templateEnv
+          var lambdaVal=lispEprog(fbody,lambdaEnv)[0];//eval fbody in lambdaEnv
+          return tbody==L.zhi ? lambdaVal : lispE1(lambdaVal,env)[0];//macro eval lambdaVal in env
+        }//}}}
+        var ret;
+        if(F.batom(f)){ ret=evalAtom(f); }
+        else{
+          var f0=F.car(f);
+          if(F.batom(f0)){
+            var ve=evalAxiom(f0);//val and env
+            ret = ve ? ve : evalLambda(evalAtom(f0),lookupDicts) ;//js eval args from left to right
+          }else ret=f;
+        }
+        return [ret,env];
+      }//}}}
+      function lispP3(f){//{{{
+        function f2s(f){
+          if(F.batom(f)) return f;
+          return L.lg + F.f2l(f).map(f2s).join(L.sep) + L.rg;
+        }
+        var oe=gid('o');//output element
+        oe.innerHTML='';
+        F.f2l(f).forEach(function(x,i){ oe.appendChild(cTr([''+(1+i),f2s(x)])); });
+      }//}}}
+    </script>
+  </head>
+  <body>
+    <textarea id='i' cols='80' rows='24'></textarea>
+    <hr>
+    <button onclick='xue()'>学</button>
+    <hr>
+    <table id='o'></table>
+  </body>
+</html>
